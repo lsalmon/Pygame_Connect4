@@ -9,17 +9,18 @@ def print_grid(grid):
 		print()
 
 def drop_token(grid, index, token):
+	test_grid = copy.deepcopy(grid)
 	# If the top of the column is already taken, cannot drop token
-	if grid[0][index] != '.':
-		return grid, True
+	if test_grid[0][index] != '.':
+		return test_grid, True
 	else:
 		# Test from the bottom of the array to the top
-		for j in range(len(grid)-1, -1, -1):
-			if grid[j][index] == '.':
+		for j in range(len(test_grid)-1, -1, -1):
+			if test_grid[j][index] == '.':
 				break
 
-		grid[j][index] = token
-		return grid, False
+		test_grid[j][index] = token
+		return test_grid, False
 		
 # Tests to hceck if somebody won the game
 def check_lines(grid, token):
@@ -95,8 +96,8 @@ def check_weight_immediate_win(grid, weight_list, token):
 	# If adding a token somewhere result in a win,
 	# add it as the highest weight
 	for index in range(len(grid[0])):
-		test_grid, error = drop_token(test_grid, index, token)
-		if check_win(test_grid, token):
+		grid_token, error = drop_token(test_grid, index, token)
+		if check_win(grid_token, token):
 			weight_list.append( (index, 10) )
 	
 	del test_grid
@@ -263,7 +264,7 @@ def bot(grid):
 	weight_list = []
 	
 	# First check if there is a way to win the game with the token
-	#weight_list = check_weight_immediate_win(grid, weight_list, 'x')
+	weight_list = check_weight_immediate_win(grid, weight_list, 'x')
 	
 	# If there isnt, check the other cases
 	if not weight_list:
@@ -328,10 +329,12 @@ def main():
 				# Window X button
 				# TODO: debug
 				if ev.type == pygame.QUIT:
-					break
+					# Exit
+					pygame.quit()
 				if ev.type == pygame.KEYDOWN:
 					if ev.key == pygame.K_ESCAPE:
-						break
+						# Exit
+						pygame.quit()
 					else:
 						# Check ASCII code for numbers only (1-7)
 						if ev.unicode and ord(ev.unicode) in range(49,56):
