@@ -3,11 +3,19 @@ import random
 import copy
 
 class Board:
-	def __init__(self, range_x, range_y):	
-		# Prepare grid  
-		self.grid = [['.' for x in range(range_x)] for y in range(range_y)]
+	def __init__(self, screen_width, screen_height, token_width, token_height, board_image, token_player_image, token_bot_image):
+		# Prepare grid
+		self.grid = [['.' for x in range(screen_width//token_width)] for y in range(screen_height//token_height)]
 		self.len_x = len(self.grid)
 		self.len_y = len(self.grid[0])
+		# Store graphics stuff
+		self.screen_width = screen_width
+		self.screen_height = screen_height
+		self.token_width = token_width
+		self.token_height = token_height
+		self.board_image = board_image
+		self.token_player_image = token_player_image
+		self.token_bot_image = token_bot_image
 		
 	def get_grid(self):
 		return self.grid
@@ -17,6 +25,25 @@ class Board:
 			for j in range(self.len_y):
 				print(self.grid[i][j], end=' ')
 			print()
+			
+	def display_grid(self, screen):
+		screen.blit(self.board_image, (0,0))
+		for i in range(self.len_x):
+			for j in range(self.len_y):
+				if self.grid[i][j] == 'x':
+					screen.blit(self.token_bot_image, (j*self.token_width,i*self.token_height))
+				if self.grid[i][j] == 'o':
+					screen.blit(self.token_player_image, (j*self.token_width,i*self.token_height))
+				
+		return screen
+		
+	def display_message(self, screen, font, message):
+		text_surface = font.render(message, True, pygame.Color ('white'))
+		text_rect = text_surface.get_rect()
+		text_rect.center = (self.screen_width//2, self.screen_height//2)
+		screen.blit(text_surface, text_rect)
+		
+		return screen
 
 	def drop_token(self, index, token):
 		# If the top of the column is already taken, cannot drop token
@@ -101,6 +128,8 @@ class Bot:
 
 		# First check if there is a way to win the game with the token
 		weight_list = self.check_weight_immediate_win(grid, game, weight_list, 'x')
+		# ....Or to prevent the player from winning in the next turn
+		weight_list = self.check_weight_immediate_win(grid, game, weight_list, 'o')
 		
 		# If there isnt, check the other cases
 		if not weight_list:
@@ -329,10 +358,29 @@ class Bot:
 def main():
 	# Init pygame
 	pygame.init()
-	pygame.display.set_mode((100, 100))
 	
-	# Create board
-	board = Board(7, 6)
+	# Init clock
+	clock = pygame.time.Clock()
+	
+	# Set screen to game board size
+	screen_width = 350
+	screen_height = 300
+	screen = pygame.display.set_mode((screen_width, screen_height))
+	
+	# Token size on the game board
+	token_width = 50
+	token_height = 50
+	
+	# Load images
+	board_image = pygame.image.load("./Board.png")
+	token_player_image = pygame.image.load("./TokenPlayer.png")
+	token_bot_image = pygame.image.load("./TokenAI.png")
+	
+	# Load text ressources
+	font = pygame.font.Font('./Oswald-Regular.ttf', 16)
+	
+	# Create board (dimensions : 7x6)
+	board = Board(screen_width, screen_height, token_width, token_height, board_image, token_player_image, token_bot_image)
 
 	# Create utility class instance to check if someone has won
 	game = Game()
@@ -342,18 +390,31 @@ def main():
 
 	print("Please enter a column number: ")
 	
-	while True:
+	# Display welcome message
+	screen = board.display_grid(screen)
+	screen = board.display_message(screen, font, "Welcome to connect four, choose a column to start")
+	pygame.display.flip()
+	
+	running = True
+	exit = False
+	while running:
+		# Cap fps to 60
+		clock.tick(60)
 		try:
 			for ev in pygame.event.get():
 				# Window X button
 				# TODO: debug
 				if ev.type == pygame.QUIT:
-					# Exit
-					pygame.quit()
+					running = False
+					break
 				if ev.type == pygame.KEYDOWN:
 					if ev.key == pygame.K_ESCAPE:
-						# Exit
-						pygame.quit()
+						running = False
+						break
+					elif ev.key == pygame.K_RETURN:
+						if exit:
+							running = False
+						break
 					else:
 						# Check ASCII code for numbers only (1-7)
 						if ev.unicode and ord(ev.unicode) in range(49,56):
@@ -366,25 +427,49 @@ def main():
 							else:
 								print("Player has played :")
 								print()
-							
+								# Print grid on console
 								board.print_grid()
+								# Load grid in screen buffer
+								screen = board.display_grid(screen)
+								
+								# Display screen previously loaded in board.display_grid
+								pygame.display.flip()
+								
 								# Check if someone won
 								if game.check_win(board.get_grid(), 'o'):
 									print("Player won")
+									screen = board.display_message(screen, font, "Player won, press return to exit")
+									pygame.display.flip()
+									# Let the player press enter to exit
+									exit = True
 									break
 								
 								print("\n\n")
+								
+								pygame.time.delay(1000)
 								
 								print("Bot has played :")
 								print()
 								column = opponent.play(board.get_grid(), game)
 								board.drop_token(column, 'x')
+								# Print grid on console
 								board.print_grid()
+								# Load grid in screen buffer
+								screen = board.display_grid(screen)
+								
+								# Display screen previously loaded in board.display_grid
+								pygame.display.flip()
+								
 								if game.check_win(board.get_grid(), 'x'):
 									print("AI won")
+									screen = board.display_message(screen, font, "AI won, press return to exit")
+									pygame.display.flip()
+									# Let the player press enter to exit
+									exit = True
 									break
 
 		except KeyboardInterrupt:
+			running = False
 			break
 
 	# Exit
