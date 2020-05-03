@@ -115,7 +115,6 @@ class Game:
 		else:
 			return False
 
-
 class Bot:
 	def __init__(self, grid):
 		self.len_x = len(grid)
@@ -416,7 +415,7 @@ def main():
 							running = False
 						break
 				# Detect left click on the mouse
-				elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+				elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1 and exit == False:
 					# Get column number by mouse position
 					mouse_pos_x = pygame.mouse.get_pos()[0]
 					column = mouse_pos_x//token_width
